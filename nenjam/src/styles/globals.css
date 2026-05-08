@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tailwind preflight sets max-width:100% and height:auto on all <img>.
+   This breaks Leaflet tile rendering — tiles get squashed to 0 height.
+   Override it specifically for the Leaflet container. */
+.leaflet-container img {
+  max-width: none !important;
+  height: inherit !important;
+}
+.leaflet-container {
+  font-family: inherit;
+}
+
+@layer base {
+  :root {
+    --safe-bottom: env(safe-area-inset-bottom);
+    --safe-top: env(safe-area-inset-top);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-cream-50 text-gray-900 font-sans;
+    overscroll-behavior: none;
+  }
+
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar hide for horizontal scroll */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-rose-100 dark:border-gray-800;
+  }
+
+  .btn-primary {
+    @apply bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-medium
+           rounded-xl px-5 py-3 transition-colors duration-150 disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 font-medium
+           rounded-xl px-4 py-2 transition-colors duration-150;
+  }
+
+  .input-field {
+    @apply w-full bg-cream-100 dark:bg-gray-800 border border-rose-200 dark:border-gray-700
+           rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-transparent
+           transition-all duration-150;
+  }
+
+  /* Bottom nav safe area */
+  .bottom-nav {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Status bar safe area */
+  .safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+}
+
+/* Timeline snap scroll */
+.timeline-scroll {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.timeline-item {
+  scroll-snap-align: center;
+}
+
+/* Mapbox popup reset */
+.mapboxgl-popup-content {
+  padding: 0 !important;
+  border-radius: 1rem !important;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+}
+.mapboxgl-popup-close-button {
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  color: #6b7280;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateX(10px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 200ms, transform 200ms;
+}
