@@ -30,6 +30,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
@@ -51,10 +53,20 @@ export default defineConfig({
           }
         ]
       },
-      devOptions: { enabled: true }
+      devOptions: { enabled: false }
     })
   ],
   server: {
+    host: true,
+    port: 5173,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless'
+    }
+  },
+  preview: {
+    host: true,
+    port: 4173,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'credentialless'

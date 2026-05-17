@@ -2,7 +2,7 @@ import {
   useEffect, useRef, useState, useCallback
 } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Plus, Moon } from 'lucide-react'
+import { Plus, Moon, ImagePlus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import type { TimelineEntry } from '../types'
@@ -13,6 +13,35 @@ import MemorySection, { type MemorySectionHandle } from '../components/timeline/
 import AddMomentSheet from '../components/timeline/AddMomentSheet'
 import MemoryDetailSheet from '../components/timeline/MemoryDetailSheet'
 import HiddenReveal from '../components/timeline/HiddenReveal'
+import TimelineMusicPlayer from '../components/timeline/TimelineMusicPlayer'
+
+// ── Background image storage ──────────────────────────────────────────────────
+
+function openBgDB(): Promise<IDBDatabase> {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('nenjam-bg-v1', 1)
+    req.onupgradeneeded = () => req.result.createObjectStore('bg')
+    req.onsuccess = () => res(req.result)
+    req.onerror   = () => rej(req.error)
+  })
+}
+async function loadBgBlob(): Promise<Blob | null> {
+  const db = await openBgDB()
+  return new Promise(res => {
+    const req = db.transaction('bg', 'readonly').objectStore('bg').get('wallpaper')
+    req.onsuccess = () => res(req.result ?? null)
+    req.onerror   = () => res(null)
+  })
+}
+async function saveBgBlob(blob: Blob): Promise<void> {
+  const db = await openBgDB()
+  return new Promise(res => {
+    const tx = db.transaction('bg', 'readwrite')
+    tx.objectStore('bg').put(blob, 'wallpaper')
+    tx.oncomplete = () => res()
+    tx.onerror    = () => res()
+  })
+}
 
 export default function TimelinePage() {
   const { user, partner } = useAuthStore()
@@ -25,11 +54,33 @@ export default function TimelinePage() {
   const [showHidden, setShowHidden] = useState(false)
   const [hiddenPulsing, setHiddenPulsing] = useState(true)
 
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [bgUrl, setBgUrl] = useState<string | null>(null)
+
+  const scrollRef    = useRef<HTMLDivElement>(null)
+  const bgInputRef   = useRef<HTMLInputElement>(null)
   // One ref per section, imperative handle for scroll-driven transforms
-  const sectionRefs = useRef<(MemorySectionHandle | null)[]>([])
-  const tickingRef = useRef(false)
+  const sectionRefs  = useRef<(MemorySectionHandle | null)[]>([])
+  const tickingRef   = useRef(false)
   const newEntryIdRef = useRef<string | null>(null)
+
+  // ── Load saved background ────────────────────────────────────────────────
+  useEffect(() => {
+    let url: string
+    loadBgBlob().then(blob => {
+      if (blob) { url = URL.createObjectURL(blob); setBgUrl(url) }
+    })
+    return () => { if (url) URL.revokeObjectURL(url) }
+  }, [])
+
+  const handleBgChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBgUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+    const url = URL.createObjectURL(file)
+    setBgUrl(url)
+    saveBgBlob(file)
+    e.target.value = ''
+  }, [])
 
   // ── Load entries ────────────────────────────────────────────────────────────
   const loadEntries = useCallback(async () => {
@@ -164,18 +215,31 @@ export default function TimelinePage() {
     return () => window.removeEventListener('resize', onResize)
   }, [update])
 
+  const bgStyle: React.CSSProperties = bgUrl
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.38)), url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : {}
+
   if (loading) {
     return (
-      <div style={{ height: '100vh', background: '#0d0008', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: '100vh', background: '#0d0008', ...bgStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid rgba(212,83,126,0.3)', borderTopColor: '#D4537E', animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   if (entries.length === 0) {
     return (
-      <>
+      <div style={{ position: 'relative', minHeight: '100vh', background: '#0d0008', ...bgStyle }}>
         <EmptyTimeline onAdd={() => setShowAdd(true)} />
+        <TimelineMusicPlayer />
+        {/* ── Change background button ── */}
+        <div style={{ position: 'fixed', top: 'max(16px, env(safe-area-inset-top, 16px))', left: 16, zIndex: 20 }}>
+          <input ref={bgInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgChange} />
+          <button onClick={() => bgInputRef.current?.click()} style={bgBtnStyle} title="Change background">
+            <ImagePlus size={14} />
+          </button>
+        </div>
         <AnimatePresence>
           {showAdd && (
             <AddMomentSheet
@@ -184,12 +248,12 @@ export default function TimelinePage() {
             />
           )}
         </AnimatePresence>
-      </>
+      </div>
     )
   }
 
   return (
-    <div style={{ position: 'relative', height: '100vh', background: '#000', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: '100vh', background: '#000', overflow: 'hidden', ...bgStyle }}>
       {/* ── Snap scroll container ── */}
       <div
         ref={scrollRef}
@@ -218,6 +282,14 @@ export default function TimelinePage() {
         activeIndex={activeIndex}
         onDotClick={handleDotClick}
       />
+
+      {/* ── Change background button ── */}
+      <div style={{ position: 'fixed', top: 'max(16px, env(safe-area-inset-top, 16px))', left: 16, zIndex: 20 }}>
+        <input ref={bgInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgChange} />
+        <button onClick={() => bgInputRef.current?.click()} style={bgBtnStyle} title="Change background">
+          <ImagePlus size={14} />
+        </button>
+      </div>
 
       {/* ── Hidden Timeline pill button ── */}
       <div
@@ -294,6 +366,9 @@ export default function TimelinePage() {
         )}
       </AnimatePresence>
 
+      {/* ── Background music player ── */}
+      <TimelineMusicPlayer />
+
       {/* ── Hidden Timeline overlay ── */}
       <AnimatePresence>
         {showHidden && (
@@ -311,4 +386,14 @@ export default function TimelinePage() {
       `}</style>
     </div>
   )
+}
+
+const bgBtnStyle: React.CSSProperties = {
+  width: 34, height: 34, borderRadius: '50%',
+  background: 'rgba(255,255,255,0.08)',
+  border: '0.5px solid rgba(255,255,255,0.2)',
+  color: 'rgba(255,255,255,0.55)',
+  cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  backdropFilter: 'blur(10px)',
 }
