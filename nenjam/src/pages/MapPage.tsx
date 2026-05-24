@@ -601,7 +601,7 @@ export default function MapPage() {
   const pinnedCount = photos.filter(p => p.lat !== null).length
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1 }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, touchAction: 'none' }}>
       {/* Map — always mounted so Leaflet keeps its state */}
       <div style={{ height: '100%', width: '100%' }}>
         <MapContainer
@@ -609,14 +609,14 @@ export default function MapPage() {
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
           attributionControl={false}
+          preferCanvas={true}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
             subdomains="abcd"
             maxZoom={19}
-            tileSize={512}
-            zoomOffset={-1}
+            detectRetina={true}
             updateWhenIdle={false}
             updateWhenZooming={false}
             keepBuffer={4}
