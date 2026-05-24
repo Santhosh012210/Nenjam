@@ -584,6 +584,13 @@ export default function MapPage() {
     }
   }
 
+  // Lock body scroll so iOS doesn't intercept Leaflet touch events
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
   // Sorted photos for gallery (newest first by taken_at, fallback created_at)
   const sortedPhotos = [...photos].sort((a, b) => {
     const aDate = a.taken_at ?? a.created_at
@@ -594,21 +601,25 @@ export default function MapPage() {
   const pinnedCount = photos.filter(p => p.lat !== null).length
 
   return (
-    <div className="relative" style={{ height: '100dvh' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1 }}>
       {/* Map — always mounted so Leaflet keeps its state */}
-      <div style={{ height: '100dvh', width: '100%' }}>
+      <div style={{ height: '100%', width: '100%' }}>
         <MapContainer
           center={SG_CENTER} zoom={12}
-          style={{ height: '100dvh', width: '100%' }}
+          style={{ height: '100%', width: '100%' }}
           zoomControl={false}
           attributionControl={false}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
             subdomains="abcd"
             maxZoom={19}
-            detectRetina={true}
+            tileSize={512}
+            zoomOffset={-1}
+            updateWhenIdle={false}
+            updateWhenZooming={false}
+            keepBuffer={4}
             crossOrigin="anonymous"
           />
           {clusters.map((cluster) => {
@@ -638,6 +649,7 @@ export default function MapPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             className="absolute inset-0 z-[800] bg-white dark:bg-gray-950 overflow-y-auto"
+            style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
             onClick={() => setConfirmDeleteId(null)}
           >
             <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 5rem)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)' }}>
