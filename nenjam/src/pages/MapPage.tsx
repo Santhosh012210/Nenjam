@@ -247,7 +247,7 @@ function UploadModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"><X size={20} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-8 space-y-5">
           <div className="w-full h-44 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
             <img src={pending.previewUrl} className="w-full h-full object-cover" alt="" />
           </div>
@@ -385,9 +385,8 @@ function UploadModal({
               </div>
             )}
           </div>
-        </div>
 
-        <div className="flex-none px-5 py-4 border-t border-gray-100 dark:border-gray-800">
+          {/* Confirm button sits right below the location section */}
           <button onClick={handleConfirm} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
             {saving
               ? <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin block" />
