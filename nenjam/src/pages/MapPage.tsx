@@ -584,11 +584,16 @@ export default function MapPage() {
     }
   }
 
-  // Lock body scroll so iOS doesn't intercept Leaflet touch events
+  // Explicit pixel height — percentage heights are unreliable in Leaflet on iOS
+  const [vh, setVh] = useState(() => window.innerHeight)
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    const update = () => setVh(window.innerHeight)
+    window.addEventListener('resize', update)
+    window.addEventListener('orientationchange', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', update)
+    }
   }, [])
 
   // Sorted photos for gallery (newest first by taken_at, fallback created_at)
@@ -601,16 +606,15 @@ export default function MapPage() {
   const pinnedCount = photos.filter(p => p.lat !== null).length
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, touchAction: 'none' }}>
-      {/* Map — always mounted so Leaflet keeps its state */}
-      <div style={{ height: '100%', width: '100%' }}>
-        <MapContainer
-          center={SG_CENTER} zoom={12}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          attributionControl={false}
-          preferCanvas={true}
-        >
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: vh, zIndex: 1 }}>
+      {/* Map — explicit px height so Leaflet always knows its size on iOS */}
+      <MapContainer
+        center={SG_CENTER} zoom={12}
+        style={{ height: vh, width: '100%' }}
+        zoomControl={false}
+        attributionControl={false}
+        preferCanvas={true}
+      >
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
@@ -637,7 +641,6 @@ export default function MapPage() {
           <ZoomControl />
           <LocateControl />
         </MapContainer>
-      </div>
 
       {/* Gallery overlay — sits on top of the map */}
       <AnimatePresence>

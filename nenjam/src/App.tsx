@@ -69,18 +69,24 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      <Toaster position="top-center" richColors />
-      <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/more/*" element={<MorePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
-    </Layout>
+    <>
+      {/* Map renders outside Layout so it's free of pb-20, AnimatePresence transforms, and overflow constraints */}
+      <Routes>
+        <Route path="/map" element={<MapPage />} />
+      </Routes>
+
+      <Layout>
+        <Toaster position="top-center" richColors />
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/more/*" element={<MorePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </Layout>
+    </>
   )
 }
