@@ -590,9 +590,25 @@ export default function MapPage() {
     const update = () => setVh(window.innerHeight)
     window.addEventListener('resize', update)
     window.addEventListener('orientationchange', update)
+
+    // Prevent iOS from scrolling the page behind the map
+    const html = document.documentElement
+    const body = document.body
+    const main = document.querySelector('main') as HTMLElement | null
+    const prevHtml = html.style.overflow
+    const prevBody = body.style.overflow
+    const prevMain = main?.style.overflow ?? ''
+    const prevMainPb = main?.style.paddingBottom ?? ''
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    if (main) { main.style.overflow = 'hidden'; main.style.paddingBottom = '0' }
+
     return () => {
       window.removeEventListener('resize', update)
       window.removeEventListener('orientationchange', update)
+      html.style.overflow = prevHtml
+      body.style.overflow = prevBody
+      if (main) { main.style.overflow = prevMain; main.style.paddingBottom = prevMainPb }
     }
   }, [])
 
