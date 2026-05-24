@@ -769,8 +769,8 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Add photo button */}
-      <div className="absolute right-4 z-[1001]" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+      {/* Add photo button — bottom-left, mirroring the locate button */}
+      <div className="absolute left-4 z-[1001]" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}>
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={() => fileInputRef.current?.click()}
