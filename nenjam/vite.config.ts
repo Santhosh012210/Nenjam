@@ -46,9 +46,10 @@ export default defineConfig({
           },
           {
             urlPattern: /^https:\/\/[a-z]\.basemaps\.cartocdn\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'carto-tiles-cache',
+              cacheName: 'carto-tiles-cache-v2',
+              networkTimeoutSeconds: 3,
               expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }
             }
           }

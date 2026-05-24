@@ -2,12 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tailwind preflight sets max-width:100% and height:auto on all <img>.
-   This breaks Leaflet tile rendering — tiles get squashed to 0 height.
-   Override it specifically for the Leaflet container. */
+/* Tailwind preflight sets max-width:100% which can clip Leaflet tiles.
+   Only override max-width — do NOT touch height or display, as Leaflet
+   sets those via inline styles and !important would override them. */
 .leaflet-container img {
   max-width: none !important;
-  height: inherit !important;
 }
 .leaflet-container {
   font-family: inherit;

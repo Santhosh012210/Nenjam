@@ -47,7 +47,11 @@ function MapController({
   const fittedRef = useRef(false)
 
   useEffect(() => {
-    if (active) setTimeout(() => map.invalidateSize(), 200)
+    if (!active) return
+    // Multiple invalidates to handle iOS layout delays and safe-area shifts
+    setTimeout(() => map.invalidateSize(), 100)
+    setTimeout(() => map.invalidateSize(), 300)
+    setTimeout(() => map.invalidateSize(), 700)
   }, [active, map])
 
   useEffect(() => {
