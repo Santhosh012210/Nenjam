@@ -47,7 +47,7 @@ function MapController({
   const fittedRef = useRef(false)
 
   useEffect(() => {
-    if (active) setTimeout(() => map.invalidateSize(), 60)
+    if (active) setTimeout(() => map.invalidateSize(), 200)
   }, [active, map])
 
   useEffect(() => {
@@ -83,17 +83,35 @@ function LocateControl() {
     )
   }
   return (
-    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: '6rem', marginRight: '1rem' }}>
+    <div className="leaflet-bottom leaflet-right"
+      style={{ marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)', marginRight: '1rem' }}>
       <div className="leaflet-control">
-        <button
-          onClick={locate}
-          className="bg-white dark:bg-gray-900 shadow-lg rounded-2xl w-11 h-11 flex items-center justify-center text-rose-600 border border-rose-100"
-        >
+        <button onClick={locate} style={mapCtrlBtn}>
           {locating ? <Loader2 size={18} className="animate-spin" /> : <Locate size={18} />}
         </button>
       </div>
     </div>
   )
+}
+
+function ZoomControl() {
+  const map = useMap()
+  return (
+    <div className="leaflet-top leaflet-right" style={{ marginTop: '5rem', marginRight: '1rem' }}>
+      <div className="leaflet-control" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <button onClick={() => map.zoomIn()} style={{ ...mapCtrlBtn, fontSize: 22, fontWeight: 300 }}>+</button>
+        <button onClick={() => map.zoomOut()} style={{ ...mapCtrlBtn, fontSize: 22, fontWeight: 300 }}>−</button>
+      </div>
+    </div>
+  )
+}
+
+const mapCtrlBtn: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: 14,
+  background: 'white', border: '1px solid rgba(190,24,93,0.15)',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: '#be185d', cursor: 'pointer', fontSize: 14,
 }
 
 function makePhotoPin(url: string | undefined, count: number): L.DivIcon {
@@ -576,15 +594,22 @@ export default function MapPage() {
   const pinnedCount = photos.filter(p => p.lat !== null).length
 
   return (
-    <div className="relative" style={{ height: '100vh' }}>
+    <div className="relative" style={{ height: '100dvh' }}>
       {/* Map — always mounted so Leaflet keeps its state */}
-      <div style={{ height: '100vh', width: '100%' }}>
-        <MapContainer center={SG_CENTER} zoom={12} style={{ height: '100vh', width: '100%' }} zoomControl={false}>
+      <div style={{ height: '100dvh', width: '100%' }}>
+        <MapContainer
+          center={SG_CENTER} zoom={12}
+          style={{ height: '100dvh', width: '100%' }}
+          zoomControl={false}
+          attributionControl={false}
+          tap={false}
+        >
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
             subdomains="abcd"
             maxZoom={19}
+            detectRetina={true}
             crossOrigin="anonymous"
           />
           {clusters.map((cluster) => {
@@ -599,6 +624,7 @@ export default function MapPage() {
             )
           })}
           <MapController flyTo={flyTo} clusters={clusters} active={view === 'map'} />
+          <ZoomControl />
           <LocateControl />
         </MapContainer>
       </div>
@@ -615,7 +641,7 @@ export default function MapPage() {
             className="absolute inset-0 z-[800] bg-white dark:bg-gray-950 overflow-y-auto"
             onClick={() => setConfirmDeleteId(null)}
           >
-            <div className="pt-20 pb-28">
+            <div style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 5rem)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)' }}>
               {sortedPhotos.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center px-8">
                   <div className="text-5xl mb-4">📸</div>
@@ -685,7 +711,8 @@ export default function MapPage() {
       </AnimatePresence>
 
       {/* Tab switcher — always on top */}
-      <div className="absolute top-4 left-0 right-0 z-[1002] flex justify-center safe-top pointer-events-none">
+      <div className="absolute left-0 right-0 z-[1002] flex justify-center pointer-events-none"
+        style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
         <div className="pointer-events-auto bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 flex p-1 gap-1">
           <button
             onClick={() => setView('map')}
@@ -709,7 +736,7 @@ export default function MapPage() {
       </div>
 
       {/* Add photo button */}
-      <div className="absolute top-4 right-4 z-[1001] safe-top">
+      <div className="absolute right-4 z-[1001]" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={() => fileInputRef.current?.click()}
@@ -723,7 +750,7 @@ export default function MapPage() {
 
       {/* Memory count badge (map view only) */}
       {view === 'map' && photos.length > 0 && (
-        <div className="absolute top-4 left-4 z-[1001] safe-top">
+        <div className="absolute left-4 z-[1001]" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
           <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl px-3 py-2 shadow border border-rose-100 flex items-center gap-1.5">
             <MapPin size={13} className="text-rose-500" />
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
@@ -739,7 +766,8 @@ export default function MapPage() {
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="absolute bottom-24 left-0 right-0 z-[1000] mx-4"
+            className="absolute left-0 right-0 z-[1000] mx-4"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
           >
             <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
