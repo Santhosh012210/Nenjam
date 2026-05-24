@@ -30,6 +30,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        cacheId: 'nenjam-v4',
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
