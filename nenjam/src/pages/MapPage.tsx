@@ -237,16 +237,17 @@ function UploadModal({
     >
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl flex flex-col"
+        style={{ maxHeight: 'min(92dvh, 92vh)' }}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex-none flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
           <h2 className="font-bold text-gray-900 dark:text-white text-lg">Add to map</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"><X size={20} /></button>
         </div>
 
-        <div className="overflow-y-auto max-h-[80vh] px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           <div className="w-full h-44 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
             <img src={pending.previewUrl} className="w-full h-full object-cover" alt="" />
           </div>
@@ -386,7 +387,7 @@ function UploadModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex-none px-5 py-4 border-t border-gray-100 dark:border-gray-800">
           <button onClick={handleConfirm} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
             {saving
               ? <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin block" />
