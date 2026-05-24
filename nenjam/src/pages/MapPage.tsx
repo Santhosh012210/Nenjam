@@ -602,7 +602,6 @@ export default function MapPage() {
           style={{ height: '100dvh', width: '100%' }}
           zoomControl={false}
           attributionControl={false}
-          tap={false}
         >
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
