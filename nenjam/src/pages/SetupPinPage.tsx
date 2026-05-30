@@ -29,7 +29,7 @@ export default function SetupPinPage() {
   const handleUnlock = async () => {
     if (pin.length < 4) { setError('Enter your PIN'); return }
     setLoading(true)
-    const ok = await unlockWithPin(pin, partner?.public_key ?? null)
+    const ok = await unlockWithPin(user!.id, pin, partner?.public_key ?? null)
     if (!ok) {
       setError('Wrong PIN. Try again.')
       setPin('')

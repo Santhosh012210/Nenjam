@@ -34,7 +34,6 @@ export default function App() {
 
   useEffect(() => {
     init()
-    checkForStoredKey()
 
     // Dark mode: follow system preference
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -43,6 +42,10 @@ export default function App() {
       document.documentElement.classList.toggle('dark', e.matches)
     })
   }, [])
+
+  useEffect(() => {
+    if (user) checkForStoredKey(user.id)
+  }, [user])
 
   useEffect(() => {
     if (user && keysReady) {

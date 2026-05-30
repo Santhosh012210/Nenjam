@@ -9,8 +9,8 @@ import {
   decryptKeyWithPin,
   saveEncryptedPrivateKey,
   loadEncryptedPrivateKey,
+  hasStoredKeyForUser,
   savePublicKeyLocally,
-  loadPublicKeyLocally,
 } from '../lib/encryption'
 import { supabase } from '../lib/supabase'
 
@@ -22,9 +22,9 @@ interface EncryptionState {
   sharedKey: Uint8Array | null  // derived after partner's pub key is known
   privateJournalKey: Uint8Array | null  // first 32 bytes of private key used as secretbox key
 
-  checkForStoredKey: () => void
+  checkForStoredKey: (userId: string) => void
   setupNewKeys: (pin: string, userId: string) => Promise<void>
-  unlockWithPin: (pin: string, partnerPublicKeyB64: string | null) => Promise<boolean>
+  unlockWithPin: (userId: string, pin: string, partnerPublicKeyB64: string | null) => Promise<boolean>
   deriveAndSetSharedKey: (partnerPublicKeyB64: string) => void
   refreshSharedKey: (userId: string) => Promise<void>
   lock: () => void
@@ -38,16 +38,15 @@ export const useEncryptionStore = create<EncryptionState>((set, get) => ({
   sharedKey: null,
   privateJournalKey: null,
 
-  checkForStoredKey: () => {
-    const stored = loadEncryptedPrivateKey()
-    set({ hasStoredKey: !!stored })
+  checkForStoredKey: (userId) => {
+    set({ hasStoredKey: hasStoredKeyForUser(userId) })
   },
 
   setupNewKeys: async (pin, userId) => {
     const kp = generateKeyPair()
     const encryptedPriv = await encryptKeyWithPin(kp.secretKey, pin)
-    saveEncryptedPrivateKey(encryptedPriv)
-    savePublicKeyLocally(exportPublicKey(kp))
+    saveEncryptedPrivateKey(userId, encryptedPriv)
+    savePublicKeyLocally(userId, exportPublicKey(kp))
 
     // Save public key to Supabase so partner can see it
     await supabase
@@ -64,8 +63,8 @@ export const useEncryptionStore = create<EncryptionState>((set, get) => ({
     })
   },
 
-  unlockWithPin: async (pin, partnerPublicKeyB64) => {
-    const storedJson = loadEncryptedPrivateKey()
+  unlockWithPin: async (userId, pin, partnerPublicKeyB64) => {
+    const storedJson = loadEncryptedPrivateKey(userId)
     if (!storedJson) return false
     try {
       const privKey = await decryptKeyWithPin(storedJson, pin)

@@ -151,24 +151,42 @@ export async function decryptKeyWithPin(
   return new Uint8Array(plaintext)
 }
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
+// ─── localStorage helpers (keyed by userId so two accounts on the same
+//     browser never overwrite each other's private keys) ──────────────────────
 
-const KEY_PRIVATE = 'nenjam_priv'
-const KEY_PUBLIC  = 'nenjam_pub'
+const privKey = (uid: string) => `nenjam_priv_${uid}`
+const pubKey  = (uid: string) => `nenjam_pub_${uid}`
 
-export function saveEncryptedPrivateKey(encrypted: string) {
-  localStorage.setItem(KEY_PRIVATE, encrypted)
+export function saveEncryptedPrivateKey(uid: string, encrypted: string) {
+  localStorage.setItem(privKey(uid), encrypted)
 }
-export function loadEncryptedPrivateKey(): string | null {
-  return localStorage.getItem(KEY_PRIVATE)
+
+export function loadEncryptedPrivateKey(uid: string): string | null {
+  const stored = localStorage.getItem(privKey(uid))
+  if (stored) return stored
+  // Migration: if old un-namespaced key exists, move it under this userId
+  const legacy = localStorage.getItem('nenjam_priv')
+  if (legacy) {
+    localStorage.setItem(privKey(uid), legacy)
+    localStorage.removeItem('nenjam_priv')
+    return legacy
+  }
+  return null
 }
-export function savePublicKeyLocally(pubKey: string) {
-  localStorage.setItem(KEY_PUBLIC, pubKey)
+
+export function hasStoredKeyForUser(uid: string): boolean {
+  return !!(localStorage.getItem(privKey(uid)) || localStorage.getItem('nenjam_priv'))
 }
-export function loadPublicKeyLocally(): string | null {
-  return localStorage.getItem(KEY_PUBLIC)
+
+export function savePublicKeyLocally(uid: string, pubKeyVal: string) {
+  localStorage.setItem(pubKey(uid), pubKeyVal)
 }
-export function clearKeys() {
-  localStorage.removeItem(KEY_PRIVATE)
-  localStorage.removeItem(KEY_PUBLIC)
+
+export function loadPublicKeyLocally(uid: string): string | null {
+  return localStorage.getItem(pubKey(uid)) ?? localStorage.getItem('nenjam_pub')
+}
+
+export function clearKeys(uid: string) {
+  localStorage.removeItem(privKey(uid))
+  localStorage.removeItem(pubKey(uid))
 }
