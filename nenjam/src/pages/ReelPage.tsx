@@ -180,12 +180,16 @@ export default function ReelPage() {
       if (sel[1]) decrypt(sel[1])
     })()
 
-    // Also try to load a song from our_song app setting
+    // Load the configured song from app_settings
     ;(async () => {
-      const { data: settings } = await supabase.from('app_settings').select('our_song_url, our_song_title').eq('user_id', user.id).maybeSingle()
-      if (settings?.our_song_url) {
-        musicRef.current.loadSong({ title: settings.our_song_title ?? 'Our Song', artist: '', url: settings.our_song_url })
-      }
+      const { data: settings } = await supabase.from('app_settings').select('our_song_url').eq('user_id', user.id).maybeSingle()
+      if (!settings?.our_song_url) return
+      const { data: songMeta } = await supabase.from('tamil_songs').select('title, artist').eq('youtube_url', settings.our_song_url).maybeSingle()
+      musicRef.current.loadSong({
+        title: songMeta?.title ?? 'Our Song',
+        artist: songMeta?.artist ?? '',
+        url: settings.our_song_url,
+      })
     })()
 
     return () => { Object.values(urlsRef.current).forEach(revokeObjectUrl); urlsRef.current = {} }

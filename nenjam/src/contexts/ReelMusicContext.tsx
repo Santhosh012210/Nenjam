@@ -43,7 +43,7 @@ interface ReelMusicCtx {
   pause: () => void
   toggleMute: () => void
   loadSong: (song: ReelSong) => void
-  triggerPlay: () => void  // call on user gesture if needsGesture
+  triggerPlay: () => void
 }
 
 const Ctx = createContext<ReelMusicCtx | null>(null)
@@ -79,15 +79,16 @@ function fadeVol(playerRef: React.MutableRefObject<YTPlayer | null>, from: numbe
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function ReelMusicProvider({ children }: { children: ReactNode }) {
-  const playerRef  = useRef<YTPlayer | null>(null)
-  const readyRef   = useRef(false)
-  const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null)
-  const pendingRef = useRef<string | null>(null)
+  const playerRef    = useRef<YTPlayer | null>(null)
+  const readyRef     = useRef(false)
+  const fadeRef      = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pendingRef   = useRef<string | null>(null)
+  const wantsPlayRef = useRef(false)  // tracks whether we intend to be playing
 
-  const [apiReady,    setApiReady]    = useState(false)
-  const [isPlaying,   setIsPlaying]   = useState(false)
-  const [isMuted,     setIsMuted]     = useState(() => localStorage.getItem('reel_music_muted') === 'true')
-  const [currentSong, setCurrentSong] = useState<ReelSong | null>(null)
+  const [apiReady,     setApiReady]     = useState(false)
+  const [isPlaying,    setIsPlaying]    = useState(false)
+  const [isMuted,      setIsMuted]      = useState(() => localStorage.getItem('reel_music_muted') === 'true')
+  const [currentSong,  setCurrentSong]  = useState<ReelSong | null>(null)
   const [needsGesture, setNeedsGesture] = useState(false)
 
   const isMutedRef = useRef(isMuted)
@@ -113,22 +114,46 @@ export function ReelMusicProvider({ children }: { children: ReactNode }) {
     Object.assign(div.style, { position: 'fixed', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none', bottom: '0', left: '0', zIndex: '-1' })
     document.body.appendChild(div)
 
+    const startPlayback = () => {
+      if (!playerRef.current || !wantsPlayRef.current) return
+      if (fadeRef.current) clearInterval(fadeRef.current)
+      playerRef.current.playVideo()
+      if (!isMutedRef.current) {
+        playerRef.current.setVolume(0)
+        fadeRef.current = fadeVol(playerRef, 0, TARGET_VOL, 2000)
+      }
+      setNeedsGesture(false)
+    }
+
     playerRef.current = new window.YT.Player('reel-yt-player', {
-      playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, loop: 1, modestbranding: 1, playsinline: 1, rel: 0 },
+      playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, playsinline: 1, rel: 0 },
       events: {
         onReady: () => {
           readyRef.current = true
           if (pendingRef.current) {
             const vid = extractVideoId(pendingRef.current)
-            if (vid) playerRef.current?.loadVideoById(vid)
             pendingRef.current = null
+            if (vid) {
+              playerRef.current?.loadVideoById(vid)
+              // onStateChange(5) will handle auto-play; also set a fallback
+              setTimeout(startPlayback, 600)
+            }
           }
         },
         onStateChange: (e) => {
           setIsPlaying(e.data === 1)
-          if (e.data === -1 || e.data === 5) setNeedsGesture(true)
+          if (e.data === 5 && wantsPlayRef.current) {
+            // Video cued and ready — start playback
+            startPlayback()
+          } else if (e.data === 0 && wantsPlayRef.current) {
+            // Ended — loop manually (loop:1 only works with a playlist param)
+            playerRef.current?.playVideo()
+          } else if (e.data === -1 && wantsPlayRef.current) {
+            // iOS blocked autoplay — show tap prompt
+            setNeedsGesture(true)
+          }
         },
-        onError: () => setNeedsGesture(true),
+        onError: () => { if (wantsPlayRef.current) setNeedsGesture(true) },
       },
     })
 
@@ -141,9 +166,10 @@ export function ReelMusicProvider({ children }: { children: ReactNode }) {
   const clearFade = () => { if (fadeRef.current) clearInterval(fadeRef.current) }
 
   const play = useCallback(() => {
+    wantsPlayRef.current = true
     if (!playerRef.current || !readyRef.current) return
-    playerRef.current.playVideo()
     clearFade()
+    playerRef.current.playVideo()
     if (!isMutedRef.current) {
       playerRef.current.setVolume(0)
       fadeRef.current = fadeVol(playerRef, 0, TARGET_VOL, 2000)
@@ -154,6 +180,7 @@ export function ReelMusicProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const pause = useCallback(() => {
+    wantsPlayRef.current = false
     if (!playerRef.current || !readyRef.current) return
     clearFade()
     const cur = playerRef.current.getVolume()
@@ -180,6 +207,20 @@ export function ReelMusicProvider({ children }: { children: ReactNode }) {
     if (!vid) return
     if (!readyRef.current) { pendingRef.current = song.url; return }
     playerRef.current?.loadVideoById(vid)
+    // onStateChange(5) fires when cued and triggers startPlayback.
+    // Fallback timeout in case state 5 doesn't fire on this platform.
+    if (wantsPlayRef.current) {
+      setTimeout(() => {
+        if (!playerRef.current || !wantsPlayRef.current) return
+        if (fadeRef.current) clearInterval(fadeRef.current)
+        playerRef.current.playVideo()
+        if (!isMutedRef.current) {
+          playerRef.current.setVolume(0)
+          fadeRef.current = fadeVol(playerRef, 0, TARGET_VOL, 2000)
+        }
+        setNeedsGesture(false)
+      }, 600)
+    }
   }, [])
 
   const triggerPlay = useCallback(() => { play(); setNeedsGesture(false) }, [play])
