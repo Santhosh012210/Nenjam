@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/authStore'
 import { useEncryptionStore } from './stores/encryptionStore'
 import { useAppStore } from './stores/appStore'
+import { ReelMusicProvider } from './contexts/ReelMusicContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
 import SetupPinPage from './pages/SetupPinPage'
@@ -13,6 +14,7 @@ import ChatPage from './pages/ChatPage'
 import MapPage from './pages/MapPage'
 import TimelinePage from './pages/TimelinePage'
 import MorePage from './pages/MorePage'
+import ReelPage from './pages/ReelPage'
 
 function LoadingScreen() {
   return (
@@ -69,18 +71,21 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      <Toaster position="top-center" richColors />
-      <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/more/*" element={<MorePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
-    </Layout>
+    <ReelMusicProvider>
+      <Layout>
+        <Toaster position="top-center" richColors />
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/"         element={<HomePage />} />
+            <Route path="/chat"     element={<ChatPage />} />
+            <Route path="/map"      element={<MapPage />} />
+            <Route path="/reel"     element={<ReelPage />} />
+            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/more/*"   element={<MorePage />} />
+            <Route path="*"         element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </Layout>
+    </ReelMusicProvider>
   )
 }
