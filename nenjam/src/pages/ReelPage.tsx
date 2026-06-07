@@ -207,7 +207,7 @@ export default function ReelPage() {
 
     timerRef.current = setTimeout(() => {
       const sel = selRef.current
-      if (idx >= sel.length - 1) { setPhase('end'); return }
+      if (idx >= sel.length - 1) { musicRef.current.pause(); setPhase('end'); return }
       const next = idx + 1
       setPrevIdx(idx)
       setIsTransition(true)
@@ -249,11 +249,14 @@ export default function ReelPage() {
     setShowPauseIcon(true)
     if (pauseIconRef.current) clearTimeout(pauseIconRef.current)
     pauseIconRef.current = setTimeout(() => setShowPauseIcon(false), 1000)
-    if (!nowPaused) startTimers(idxRef.current, false)
-    else {
+    if (!nowPaused) {
+      startTimers(idxRef.current, false)
+      musicRef.current.play()
+    } else {
       if (timerRef.current) clearTimeout(timerRef.current)
       if (ovInRef.current)  clearTimeout(ovInRef.current)
       if (ovOutRef.current) clearTimeout(ovOutRef.current)
+      musicRef.current.pause()
     }
   }, [startTimers])
 
@@ -272,7 +275,7 @@ export default function ReelPage() {
   const goNext = useCallback(() => {
     const i = idxRef.current
     const sel = selRef.current
-    if (i >= sel.length - 1) { setPhase('end'); return }
+    if (i >= sel.length - 1) { musicRef.current.pause(); setPhase('end'); return }
     if (timerRef.current) clearTimeout(timerRef.current)
     const ni = i + 1
     setPrevIdx(i); setIsTransition(true); setShowOverlay(false)
@@ -291,6 +294,7 @@ export default function ReelPage() {
     setShowOverlay(false); setKenBurns(Math.random() < 0.5 ? 'in' : 'out')
     setSlideKey(k => k + 1); setPhase('ready')
     startTimers(0, false)
+    musicRef.current.play()
   }, [startTimers])
 
   // ── Touch handling ──────────────────────────────────────────────────────────
