@@ -8,6 +8,7 @@ import { useEncryptionStore } from '../../stores/encryptionStore'
 import { compressPhoto, fileToUint8Array } from '../../lib/imageProcessing'
 import { encryptBinary } from '../../lib/encryption'
 import { uploadEncryptedPhoto, generatePhotoKey } from '../../lib/r2'
+import ImageCropModal from './ImageCropModal'
 
 interface PhotoPreview { file: File; previewUrl: string }
 
@@ -26,16 +27,37 @@ export default function AddHiddenMemorySheet({ onClose, onAdded }: Props) {
   const [scenario, setScenario] = useState('')
   const [photos, setPhotos] = useState<PhotoPreview[]>([])
   const [saving, setSaving] = useState(false)
+  const [cropState, setCropState] = useState<{ file: File; url: string; queue: File[] } | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFiles = useCallback(async (files: FileList) => {
+  const startCrop = useCallback((files: File[]) => {
+    if (files.length === 0) return
+    const [first, ...rest] = files
+    setCropState({ file: first, url: URL.createObjectURL(first), queue: rest })
+  }, [])
+
+  const handleCropDone = useCallback((croppedFile: File) => {
+    if (!cropState) return
+    const { url, queue } = cropState
+    URL.revokeObjectURL(url)
+    setPhotos(prev => [...prev, { file: croppedFile, previewUrl: URL.createObjectURL(croppedFile) }])
+    if (queue.length > 0 && photos.length + 1 < 6) startCrop(queue)
+    else setCropState(null)
+  }, [cropState, photos.length, startCrop])
+
+  const handleCropCancel = useCallback(() => {
+    if (!cropState) return
+    URL.revokeObjectURL(cropState.url)
+    if (cropState.queue.length > 0 && photos.length < 6) startCrop(cropState.queue)
+    else setCropState(null)
+  }, [cropState, photos.length, startCrop])
+
+  const handleFiles = useCallback((files: FileList) => {
     const remaining = 6 - photos.length
     const toAdd = Array.from(files).slice(0, remaining)
-    for (const file of toAdd) {
-      setPhotos((prev) => [...prev, { file, previewUrl: URL.createObjectURL(file) }])
-    }
-  }, [photos.length])
+    if (toAdd.length > 0) startCrop(toAdd)
+  }, [photos.length, startCrop])
 
   const removePhoto = (i: number) => {
     setPhotos((prev) => {
@@ -80,6 +102,15 @@ export default function AddHiddenMemorySheet({ onClose, onAdded }: Props) {
   }
 
   return (
+    <>
+    {cropState && (
+      <ImageCropModal
+        imageSrc={cropState.url}
+        fileName={cropState.file.name}
+        onDone={handleCropDone}
+        onCancel={handleCropCancel}
+      />
+    )}
     <motion.div
       className="fixed inset-0 z-[9999] flex items-end justify-center"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -220,6 +251,7 @@ export default function AddHiddenMemorySheet({ onClose, onAdded }: Props) {
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </motion.div>
     </motion.div>
+    </>
   )
 }
 

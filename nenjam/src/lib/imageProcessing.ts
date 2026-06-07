@@ -1,11 +1,48 @@
 import imageCompression from 'browser-image-compression'
 
 export async function compressPhoto(file: File): Promise<File> {
-  return imageCompression(file, {
-    maxSizeMB: 2,
-    maxWidthOrHeight: 1080,
+  // First pass: max 1MB, 1920px, quality 0.92
+  const compressed = await imageCompression(file, {
+    maxSizeMB: 1,
+    maxWidthOrHeight: 1920,
     useWebWorker: true,
     fileType: 'image/jpeg',
+    initialQuality: 0.92,
+  })
+  // If result < 800KB but original had enough data, retry at higher resolution/quality
+  if (compressed.size < 800 * 1024 && file.size > 800 * 1024) {
+    const retry = await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 2560,
+      useWebWorker: true,
+      fileType: 'image/jpeg',
+      initialQuality: 0.95,
+    })
+    return retry.size <= 1024 * 1024 ? retry : compressed
+  }
+  return compressed
+}
+
+export function getCroppedImage(
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number },
+  fileName = 'cropped.jpg'
+): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width  = pixelCrop.width
+      canvas.height = pixelCrop.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height)
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Canvas crop failed')); return }
+        resolve(new File([blob], fileName, { type: 'image/jpeg' }))
+      }, 'image/jpeg', 0.95)
+    }
+    image.onerror = reject
+    image.src = imageSrc
   })
 }
 

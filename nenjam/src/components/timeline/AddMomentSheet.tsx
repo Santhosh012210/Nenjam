@@ -11,6 +11,7 @@ import { encryptBinary } from '../../lib/encryption'
 import { uploadEncryptedPhoto, generatePhotoKey } from '../../lib/r2'
 import type { TimelineEntry } from '../../types'
 import { format } from 'date-fns'
+import ImageCropModal from './ImageCropModal'
 
 const TYPE_CONFIG: Record<TimelineEntry['type'], { label: string; color: string; border: string; text: string }> = {
   milestone: { label: 'Milestone', color: 'rgba(212,83,126,0.22)', border: 'rgba(212,83,126,0.6)', text: '#F4C0D1' },
@@ -37,29 +38,56 @@ export default function AddMomentSheet({ onClose, onAdded }: Props) {
   const [locationName, setLocationName] = useState('')
   const [photos, setPhotos] = useState<PhotoPreview[]>([])
   const [saving, setSaving] = useState(false)
+  const [cropState, setCropState] = useState<{ file: File; url: string; queue: File[] } | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFiles = useCallback(async (files: FileList) => {
+  const startCrop = useCallback((files: File[]) => {
+    if (files.length === 0) return
+    const [first, ...rest] = files
+    setCropState({ file: first, url: URL.createObjectURL(first), queue: rest })
+  }, [])
+
+  const addCroppedPhoto = useCallback(async (file: File, originalFile: File) => {
+    const meta = await extractPhotoMeta(originalFile)
+    const previewUrl = URL.createObjectURL(file)
+    setPhotos(prev => {
+      // Auto-fill location GPS from first photo
+      if (prev.length === 0 && meta.lat !== null) {
+        reverseGeocode(meta.lat!, meta.lng!).then(name => { if (name) setLocationName(name) })
+      }
+      return [...prev, { file, previewUrl, lat: meta.lat ?? undefined, lng: meta.lng ?? undefined }]
+    })
+  }, [])
+
+  const handleCropDone = useCallback(async (croppedFile: File) => {
+    if (!cropState) return
+    const { file: originalFile, url, queue } = cropState
+    URL.revokeObjectURL(url)
+    await addCroppedPhoto(croppedFile, originalFile)
+    if (queue.length > 0 && photos.length + 1 < 6) {
+      startCrop(queue)
+    } else {
+      setCropState(null)
+    }
+  }, [cropState, addCroppedPhoto, photos.length, startCrop])
+
+  const handleCropCancel = useCallback(() => {
+    if (!cropState) return
+    URL.revokeObjectURL(cropState.url)
+    if (cropState.queue.length > 0 && photos.length < 6) {
+      startCrop(cropState.queue)
+    } else {
+      setCropState(null)
+    }
+  }, [cropState, photos.length, startCrop])
+
+  const handleFiles = useCallback((files: FileList) => {
     const remaining = 6 - photos.length
     const toAdd = Array.from(files).slice(0, remaining)
-    for (const file of toAdd) {
-      const previewUrl = URL.createObjectURL(file)
-      const meta = await extractPhotoMeta(file)
-      setPhotos((prev) => [...prev, {
-        file,
-        previewUrl,
-        lat: meta.lat ?? undefined,
-        lng: meta.lng ?? undefined,
-      }])
-      // Auto-fill location GPS from first photo
-      if (photos.length === 0 && meta.lat !== null) {
-        reverseGeocode(meta.lat!, meta.lng!).then((name) => {
-          if (name) setLocationName(name)
-        })
-      }
-    }
-  }, [photos.length])
+    if (toAdd.length === 0) return
+    startCrop(toAdd)
+  }, [photos.length, startCrop])
 
   const removePhoto = (i: number) => {
     setPhotos((prev) => {
@@ -120,6 +148,15 @@ export default function AddMomentSheet({ onClose, onAdded }: Props) {
   const typeKeys = Object.keys(TYPE_CONFIG) as TimelineEntry['type'][]
 
   return (
+    <>
+    {cropState && (
+      <ImageCropModal
+        imageSrc={cropState.url}
+        fileName={cropState.file.name}
+        onDone={handleCropDone}
+        onCancel={handleCropCancel}
+      />
+    )}
     <motion.div
       className="fixed inset-0 z-[9999] flex items-end justify-center"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -293,6 +330,7 @@ export default function AddMomentSheet({ onClose, onAdded }: Props) {
         </div>
       </motion.div>
     </motion.div>
+    </>
   )
 }
 
