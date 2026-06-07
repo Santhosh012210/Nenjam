@@ -67,13 +67,12 @@ export default function TimelinePage() {
   const tickingRef     = useRef(false)
   const newEntryIdRef  = useRef<string | null>(null)
   const autoTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
-  const autoScrollRef  = useRef(false)
+  const autoEnabledRef = useRef(false)   // user has toggled autoscroll ON
   const entriesRef     = useRef<TimelineEntry[]>([])
   const musicRef       = useRef(music)
 
-  autoScrollRef.current = autoScrolling
-  entriesRef.current    = entries
-  musicRef.current      = music
+  entriesRef.current = entries
+  musicRef.current   = music
 
   // ── Load saved background ──────────────────────────────────────────────────
   useEffect(() => {
@@ -123,25 +122,44 @@ export default function TimelinePage() {
   }, [ourSongUrl])
 
   // ── Autoscroll ─────────────────────────────────────────────────────────────
-  const stopAutoScroll = useCallback(() => {
+  const clearAutoTimer = () => {
     if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null }
-    setAutoScrolling(false)
-  }, [])
+  }
 
-  const startAutoScroll = useCallback(() => {
-    if (autoTimerRef.current) clearInterval(autoTimerRef.current)
-    setAutoScrolling(true)
+  const scheduleNext = useCallback(() => {
+    clearAutoTimer()
     autoTimerRef.current = setInterval(() => {
       const el   = scrollRef.current
       const ents = entriesRef.current
       if (!el || ents.length === 0) return
-      const h    = el.clientHeight
-      const cur  = Math.round(el.scrollTop / h)
-      el.scrollTo({ top: ((cur + 1) % ents.length) * h, behavior: 'smooth' })
+      const cur  = Math.round(el.scrollTop / el.clientHeight)
+      const next = (cur + 1) % ents.length
+      // scrollIntoView is more reliable than scrollTo inside snap containers
+      ;(el.children[next] as HTMLElement | undefined)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, AUTOSCROLL_MS)
   }, [])
 
-  useEffect(() => () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current) }, [])
+  const startAutoScroll = useCallback(() => {
+    autoEnabledRef.current = true
+    setAutoScrolling(true)
+    scheduleNext()
+  }, [scheduleNext])
+
+  const stopAutoScroll = useCallback(() => {
+    autoEnabledRef.current = false
+    setAutoScrolling(false)
+    clearAutoTimer()
+  }, [])
+
+  // Pause while finger is down, resume on release
+  const handleScrollPointerDown = useCallback(() => {
+    if (autoEnabledRef.current) clearAutoTimer()
+  }, [])
+  const handleScrollPointerUp = useCallback(() => {
+    if (autoEnabledRef.current) scheduleNext()
+  }, [scheduleNext])
+
+  useEffect(() => () => clearAutoTimer(), [])
 
   // ── Stop hidden button pulse after 6 s ────────────────────────────────────
   useEffect(() => {
@@ -314,7 +332,9 @@ export default function TimelinePage() {
       {/* ── Snap scroll container ── */}
       <div
         ref={scrollRef}
-        onPointerDown={() => { if (autoScrollRef.current) stopAutoScroll() }}
+        onPointerDown={handleScrollPointerDown}
+        onPointerUp={handleScrollPointerUp}
+        onPointerCancel={handleScrollPointerUp}
         style={{
           height: '100vh',
           overflowY: 'scroll',
